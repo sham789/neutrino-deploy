@@ -23,6 +23,10 @@ while [ -n "$1" ]
         shift
     done
 
+docker pull riotpurpp/neutrino-web:beta
+docker pull riotpurpp/neutrino-cache-updater:master
+docker pull riotpurpp/neutrino-explorer:master
+
 docker network create --subnet "$network_subnet" --gateway "$network_gateway" "$network_name"
 
 explorer_id=$(docker run -itd -p 8001:8001 --network neutrino --env-file explorer-env riotpurpp/neutrino-explorer:master)
@@ -33,7 +37,7 @@ postgres_ip=$(grep_cont_ip "$postgres_id")
 
 cache_updater_id=$(docker run -itd -e "DB_HOST=$postgres_ip" --network neutrino --env-file cache-updater-env riotpurpp/neutrino-cache-updater:master)
 
-redis_id=$(docker run -itd -p 6379:6379 --name neutrino-redis redis redis-server --appendonly yes)
+redis_id=$(docker run -itd --network neutrino -p 6379:6379 --name neutrino-redis redis redis-server --appendonly yes)
 
 redis_ip=$(grep_cont_ip "$redis_id")
 
@@ -47,7 +51,7 @@ explorer_url="http://$explorer_ip:8001"
 postgres_connection_url="postgresql://postgres:123123123@$postgres_ip:5432/neutrino_mainnet"
 
 web_id=$(
-	docker run -itd --network neutrino -p 5001:5001 -p 5000:5000 --env-file web-env \
+	docker run -itd --network neutrino -p 8002:5000 --env-file web-env \
 		-e "EXPLORER_ENDPOINT=$explorer_url" \
 		-e "REDIS_HOST=$redis_ip" \
 		-e "POSTGRES_CONNECTION_URL=$postgres_connection_url" riotpurpp/neutrino-web:beta)
